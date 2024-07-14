@@ -1,0 +1,11 @@
+[package]
+name = "polars-deser-row"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+polars = { path = "../polars/crates/polars", features = [
+    "object",
+    "dtype-full",
+] }
+serde = { version = "1.0.203", features = ["derive"] }
