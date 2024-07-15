@@ -1,17 +1,54 @@
 use polars::{
-    datatypes::{AnyValue, DataType},
+    datatypes::{AnyValue, DataType, LogicalType},
     series::Series,
 };
-use serde::{de::value::MapDeserializer, Deserializer};
-
-use crate::{
-    seq::ChunkedArrayDeserializer,
-    series_deser_error::{self, SeriesDeserError},
+use serde::{
+    de::{
+        value::{EnumAccessDeserializer, SeqDeserializer},
+        EnumAccess, Visitor,
+    },
+    Deserialize, Deserializer,
 };
 
-struct SeriesDeserItem {
-    series: Series,
-    idx: usize,
+use crate::{seq::ChunkedArrayDeserializer, series_deser_error::SeriesDeserError};
+
+pub(crate) struct SeriesDeserItemDeserialize(SeriesDeserItem);
+impl<'de> Deserialize<'de> for SeriesDeserItemDeserialize {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct SeriesDeserItem {
+    pub series: Series,
+    pub row_idx: usize,
+}
+impl SeriesDeserItem {
+    fn maybe_list_or_bytes<'de, V>(self, visitor: V) -> Result<V::Value, SeriesDeserError>
+    where
+        V: Visitor<'de>,
+    {
+        match self.series.dtype() {
+            DataType::BinaryOffset | DataType::Binary => {
+                let res = self.series.binary();
+                if res.is_err() {
+                    unreachable!();
+                }
+                self.series
+                    .binary()
+                    .map_err(|e| SeriesDeserError::PolarsError(e))?
+                    .get(self.row_idx)
+                    .ok_or_else(|| SeriesDeserError::Null)
+                    .and_then(|i| visitor.visit_bytes(i))
+            }
+            DataType::List(_) => self.deserialize_seq(visitor),
+            _ => unimplemented!(),
+        }
+    }
 }
 
 impl<'de> Deserializer<'de> for SeriesDeserItem {
@@ -21,7 +58,30 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        // try date
+        if let Ok(list) = self.series.date() {
+            return visitor.visit_i32(list.0.get(self.row_idx).unwrap());
+        };
+
+        if let Ok(list) = self.series.time() {
+            return visitor.visit_i64(list.0.get(self.row_idx).unwrap());
+        };
+
+        if let Ok(list) = self.series.datetime() {
+            return visitor.visit_i64(list.0.get(self.row_idx).unwrap());
+        };
+
+        if let Ok(list) = self.series.duration() {
+            return visitor.visit_i64(list.0.get(self.row_idx).unwrap());
+        };
+
+        if let Ok(list) = self.series.decimal() {
+            return visitor.visit_i128(list.0.get(self.row_idx).unwrap());
+        };
+
+        if let Ok(list) = self.series.struct_() {};
+
+        Err(SeriesDeserError::TypeMisMatch)
     }
 
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -31,7 +91,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.bool();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_bool(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -45,7 +105,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.i8();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_i8(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -59,7 +119,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.i16();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_i16(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -71,9 +131,10 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         V: serde::de::Visitor<'de>,
     {
         let res = self.series.i32();
+
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_i32(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -87,7 +148,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.i64();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_i64(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -101,7 +162,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.u8();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_u8(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -115,7 +176,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.u16();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_u16(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -128,10 +189,12 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     {
         let res = self.series.u32();
         match res {
-            Ok(i) => i
-                .get(self.idx)
-                .ok_or_else(|| SeriesDeserError::Null)
-                .and_then(|i| visitor.visit_u32(i)),
+            Ok(i) => {
+                dbg!(&res, &self, &i.get(self.row_idx));
+                i.get(self.row_idx)
+                    .ok_or_else(|| SeriesDeserError::Null)
+                    .and_then(|i| visitor.visit_u32(i))
+            }
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
         }
     }
@@ -143,7 +206,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.u64();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_u64(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -157,7 +220,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.f32();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_f32(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -171,7 +234,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.f64();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_f64(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -182,14 +245,15 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
+        // try str
         let res = self.series.str();
         match res {
             Ok(i) => {
-                let res = i.get(self.idx);
+                let res = i.get(self.row_idx);
                 let ret = match res {
                     Some(c) if c.len() == 1 => c.chars().next(),
                     Some(_) => return Err(SeriesDeserError::CharLength),
-                    None => SeriesDeserError::Null,
+                    None => return Err(SeriesDeserError::CharLength),
                 };
                 ret.ok_or_else(|| SeriesDeserError::Null)
                     .and_then(|i| visitor.visit_char(i))
@@ -205,7 +269,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.str();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_str(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -219,7 +283,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         let res = self.series.str();
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_string(i.to_string())),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -230,13 +294,21 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
-        let res = self.series.binary();
-        match res {
-            Ok(i) => i
-                .get(self.idx)
-                .ok_or_else(|| SeriesDeserError::Null)
-                .and_then(|i| visitor.visit_bytes(i)),
-            Err(e) => Err(SeriesDeserError::PolarsError(e)),
+        match self.series.dtype() {
+            DataType::BinaryOffset | DataType::Binary => {
+                let res = self.series.binary();
+                if res.is_err() {
+                    unreachable!();
+                }
+                self.series
+                    .binary()
+                    .map_err(|e| SeriesDeserError::PolarsError(e))?
+                    .get(self.row_idx)
+                    .ok_or_else(|| SeriesDeserError::Null)
+                    .and_then(|i| visitor.visit_bytes(i))
+            }
+            DataType::List(_) => self.deserialize_seq(visitor),
+            _ => unimplemented!(),
         }
     }
 
@@ -245,10 +317,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         V: serde::de::Visitor<'de>,
     {
         let res = self.series.binary();
-
         match res {
             Ok(i) => i
-                .get(self.idx)
+                .get(self.row_idx)
                 .ok_or_else(|| SeriesDeserError::Null)
                 .and_then(|i| visitor.visit_bytes(i)),
             Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -259,9 +330,13 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
-        let res = self.series.null_count() > 0;
-        if res {
-            match self.series.get(self.idx) {
+        if let Ok(_) = self.series.null() {
+            return visitor.visit_none();
+        };
+
+        let nul_c = self.series.null_count() > 0;
+        if nul_c {
+            match self.series.get(self.row_idx) {
                 Ok(AnyValue::Null) => visitor.visit_none(),
                 Ok(_) => visitor.visit_some(self),
                 Err(e) => Err(SeriesDeserError::PolarsError(e)),
@@ -304,10 +379,24 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
+        // check bytes
+        match self.series.binary() {
+            Ok(i) => {
+                let res = if let Some(seq) = i.get(self.row_idx) {
+                    visitor.visit_seq(SeqDeserializer::new(seq.into_iter().map(|i| *i)))
+                } else {
+                    let arr: [u8; 0] = [];
+                    visitor.visit_seq(SeqDeserializer::new(arr.into_iter()))
+                };
+                return res;
+            }
+            // skip
+            Err(_) => (),
+        };
         let res = self.series.list();
         match res {
             Ok(i) => {
-                let i = i.get_as_series(self.idx).unwrap();
+                let i = i.get_as_series(self.row_idx).unwrap();
                 macro_rules! template {
                     ($dt: ident, $self: ident) => {
                         visitor.visit_seq(ChunkedArrayDeserializer::new(
@@ -342,14 +431,22 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                     DataType::List(_) => todo!(),
                     DataType::Object(_, _) => todo!(),
                     DataType::Null => visitor.visit_seq(ChunkedArrayDeserializer::new(
-                        (0..self.series.len()).into_iter().map(|i| Some(i)),
+                        (0..self.series.len())
+                            .into_iter()
+                            .map(|_| Option::<()>::None),
                         self.series.len(),
                     )),
-                    DataType::Categorical(_, _) => todo!(),
-                    DataType::Enum(a, _) => {
+                    // categoricals
+                    DataType::Categorical(_, _) | DataType::Enum(_, _) => {
+                        visitor.visit_seq(ChunkedArrayDeserializer::new(
+                            i.categorical().unwrap().iter_str(),
+                            self.series.len(),
+                        ))
+                    }
+                    DataType::Enum(None, _) => {
                         todo!()
                     }
-                    DataType::Struct(_) => {
+                    DataType::Struct(fields) => {
                         todo!()
                     }
                     DataType::Unknown(_) => todo!(),
@@ -382,7 +479,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_map(self)
+        todo!()
     }
 
     fn deserialize_struct<V>(
@@ -394,7 +491,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_map(self)
+        todo!()
     }
 
     fn deserialize_enum<V>(
@@ -406,7 +503,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_enum(self)
+        todo!()
     }
 
     fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -420,6 +517,6 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        visitor.visit_unit()
     }
 }
