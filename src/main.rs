@@ -1,3 +1,4 @@
+use polars::{lazy::dsl as pl, prelude::IntoLazy};
 use polars_deser_row::series_deser::SeriesDeser;
 use serde::Deserialize;
 
@@ -17,9 +18,23 @@ fn main() {
         "utf8" => ["hello".to_string()],
         "bytes_box" => ["hello".as_bytes()],
         "bytes_vec" => ["hello".as_bytes()],
-        "bytes_char" => ["c"],
+        "char" => ["c"],
+        "cat" => [format!("{:?}", AsdfEnum::Lol)],
+        "cat_str" => [format!("{:?}", AsdfEnum::Lol)],
+        "cat_bytes" => [format!("{:?}", AsdfEnum::Lol)],
+        "cat_chars" => [format!("{:?}", AsdfEnum::Lol)],
     }
+    .unwrap()
+    .lazy()
+    .with_column(
+        pl::col("cat").cast(polars::datatypes::DataType::Categorical(
+            None,
+            polars::datatypes::CategoricalOrdering::Lexical,
+        )),
+    )
+    .collect()
     .unwrap();
+
     println!("{df}");
     let asdf = Asdf::deserialize(SeriesDeser::new(df, 0)).unwrap();
     println!("{asdf:#?}");
@@ -41,7 +56,10 @@ struct Asdf {
     utf8: String,
     bytes_box: Box<[u8]>,
     bytes_vec: Vec<u8>,
-    bytes_char: char,
+    char: char,
+    cat: AsdfEnum,
+    cat_str: String,
+    cat_bytes: Box<[u8]>,
 }
 
 #[derive(serde::Deserialize, Debug)]

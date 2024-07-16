@@ -1,9 +1,7 @@
 use polars::frame::DataFrame;
 use serde::Deserializer;
 
-use crate::{
-    series_deser_error, series_deser_map::ImplMapAccess,
-};
+use crate::{series_deser_error, series_deser_map::ImplMapAccess};
 
 pub struct SeriesDeser {
     pub(crate) df: DataFrame,
