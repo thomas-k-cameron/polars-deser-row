@@ -11,7 +11,10 @@ use serde::{
     Deserialize, Deserializer,
 };
 
-use crate::{seq::ChunkedArrayDeserializer, series_deser_error::SeriesDeserError};
+use crate::{
+    seq::ChunkedArrayDeserializer, series_deser_error::SeriesDeserError,
+    series_deser_map::ImplMapAccess,
+};
 
 pub(crate) struct SeriesDeserItemDeserialize(SeriesDeserItem);
 impl<'de> Deserialize<'de> for SeriesDeserItemDeserialize {
@@ -486,10 +489,21 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                     }
                     DataType::Array(_, size) => {
                         let c = ChunkedArrayDeserializer::new(
-                            series.list().unwrap().into_iter().map(|i| match i {
-                                None => None,
-                                Some(series) => Some(SeriesDeserItem { series, row_idx: 0 }),
-                            }),
+                            series
+                                .list()
+                                .unwrap()
+                                .into_iter()
+                                .map(|opt_ser| {
+                                    (0..series.len())
+                                        .into_iter()
+                                        .map(move |row_idx| match opt_ser.clone() {
+                                            None => None,
+                                            Some(series) => {
+                                                Some(SeriesDeserItem { series, row_idx })
+                                            }
+                                        })
+                                })
+                                .flatten(),
                             *size,
                         );
                         visitor.visit_seq(c)
@@ -519,7 +533,17 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                         ))
                     }
                     DataType::Struct(_) => {
-                        todo!()
+                        let c = self.series.struct_().unwrap();
+                        let deser = ChunkedArrayDeserializer::new(
+                            (0..c.len()).into_iter().map(|idx| {
+                                let mut impl_map =
+                                    ImplMapAccess::from_series_vec(c.fields().to_vec());
+                                impl_map.row_idx = idx;
+                                Some(impl_map)
+                            }),
+                            self.series.len(),
+                        );
+                        visitor.visit_seq(deser)
                     }
                     DataType::Unknown(_) => todo!(),
                 }

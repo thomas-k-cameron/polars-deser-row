@@ -7,7 +7,8 @@ Columnar file formats can dramatically reduce the disk usage but it has been  ra
 ## Examples
 
 ### Deserializing Sequence
-```
+
+```text
 shape: (2, 2)
 ┌───────────────────────────┬───────────────────────────┐
 │ veced                     ┆ boxed                     │
@@ -18,7 +19,9 @@ shape: (2, 2)
 │ [2.2251e-308, 1.0, … 3.0] ┆ [2.2251e-308, 1.0, … 3.0] │
 └───────────────────────────┴───────────────────────────┘
 ```
+
 This dataframe becomes,
+
 ```rust
 Structf64 {
     veced: [
@@ -35,9 +38,10 @@ Structf64 {
     ],
 }
 ```
+
 ### Deserializing Integers and `bool`
 
-```
+```text
 ---- tests::deser_primitive_integers stdout ----
 shape: (3, 9)
 ┌───────┬──────┬───────┬───────┬───┬───────┬────────┬────────┬────────┐
@@ -50,7 +54,9 @@ shape: (3, 9)
 │ false ┆ 3    ┆ 3     ┆ 3     ┆ … ┆ 3     ┆ 3      ┆ 3      ┆ 3      │
 └───────┴──────┴───────┴───────┴───┴───────┴────────┴────────┴────────┘
 ```
+
 This becomes,
+
 ```rust
 PrimitiveTyInt {
     bool: false,
@@ -66,7 +72,8 @@ PrimitiveTyInt {
 ```
 
 ### Deserializing Float
-```
+
+```text
 ---- tests::deser_primitive_float stdout ----
 shape: (3, 2)
 ┌─────────┬─────────┐
@@ -79,7 +86,9 @@ shape: (3, 2)
 │ 3.0     ┆ 3.0     │
 └─────────┴─────────┘
 ```
+
 This becomes,
+
 ```rust
  PrimitiveFloat {
     float32: 3.0,
@@ -88,5 +97,6 @@ This becomes,
 ```
 
 ## TODO
+
 - [ ] support map
 - [ ] support serde's serialization

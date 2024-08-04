@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-polars = { path = "../polars/crates/polars", features = [
-    "object",
-    "dtype-full",
-] }
+polars = { path = "../polars/crates/polars", features = ["object", "dtype-full", "lazy", "serde"] }
 serde = { version = "1.0.203", features = ["derive"] }
+source_code_location = { git = "https://github.com/thomas-k-cameron/source_code_location.git" }

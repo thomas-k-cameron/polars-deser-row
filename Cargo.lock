@@ -92,6 +92,9 @@ name = "bitflags"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bumpalo"
@@ -826,6 +829,7 @@ dependencies = [
  "rand_distr",
  "rayon",
  "regex",
+ "serde",
  "serde_json",
  "smartstring",
  "thiserror",
@@ -839,6 +843,7 @@ version = "0.1.0"
 dependencies = [
  "polars",
  "serde",
+ "source_code_location",
 ]
 
 [[package]]
@@ -1390,9 +1395,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fb72c633efbaa2dd666986505016c32c3044395ceaf881518399d2f4127ee29"
 dependencies = [
  "autocfg",
+ "serde",
  "static_assertions",
  "version_check",
 ]
+
+[[package]]
+name = "source_code_location"
+version = "0.1.0"
+source = "git+https://github.com/thomas-k-cameron/source_code_location.git#f2dbc092f319801a3ce495e9bc7ceba246e0598f"
 
 [[package]]
 name = "sqlparser"

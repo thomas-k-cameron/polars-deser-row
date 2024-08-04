@@ -1,7 +1,10 @@
 use std::fmt::Debug;
+use std::io::Cursor;
 
+use polars::datatypes::StructChunked;
+use polars::io::SerReader;
 use polars::lazy::dsl::{self as pl, SpecialEq};
-use polars::prelude::LiteralValue;
+use polars::prelude::{AnyValue, LiteralValue};
 use polars::{
     df,
     frame::DataFrame,
@@ -52,7 +55,7 @@ fn deser_primitive_integers() {
             uint64: 1,
         }
     );
-
+    dbg!(ty);
     let ty: PrimitiveTyInt = crate::deserialize_from_dataframe(df.clone(), 1).unwrap();
     assert_eq!(
         ty,
@@ -169,7 +172,8 @@ fn deser_primitive_float() {
             float64: 3.
         }
     );
-
+    println!("{df:?}");
+    dbg!(ty);
     let ty_stack = crate::from_dataframe_deserialize_all::<PrimitiveFloat>(df.clone())
         .into_iter()
         .map(|i| i.unwrap())
@@ -195,7 +199,7 @@ fn deser_primitive_float() {
 }
 
 #[test]
-fn nested_seq() {
+fn deser_seq() {
     macro_rules! template {
         ($struct_name: ident, $ty: ty, $arr1: expr, $arr2: expr) => {
             #[derive(serde::Deserialize, Debug, PartialEq)]
@@ -225,6 +229,7 @@ fn nested_seq() {
                 .unwrap();
 
             let asdf: $struct_name = crate::deserialize_from_dataframe(df.clone(), 0).unwrap();
+
             assert_eq!(
                 asdf,
                 $struct_name {
@@ -271,4 +276,58 @@ fn nested_seq() {
     );
 
     template!(StructZeroLength, f64, [], []);
+}
+
+#[test]
+fn deser_nested_seq() {
+    #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
+    struct Item {
+        int8: i8,
+        int16: i16,
+    }
+
+    let s = StructChunked::new(
+        "name",
+        &[
+            Series::new("int8", [1i8, 2, 3]),
+            Series::new("int16", [1i16, 2, 3]),
+        ],
+    )
+    .unwrap();
+    println!("{}", s.len());
+    println!("{:#?}", s.fields());
+
+    let df = DataFrame::new(s.fields().to_vec()).unwrap();
+    let ty: Vec<Result<Item, _>> = crate::from_dataframe_deserialize_all(df);
+    println!("{:#?}", ty);
+}
+
+#[test]
+fn deser_nested_seq_csv() {
+    #[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
+    struct Item {
+        index: i64,
+        customer_id: String,
+        first_name: String,
+        last_name: String,
+        company: String,
+        city: String,
+        country: String,
+        phone_1: String,
+        phone_2: String,
+        email: String,
+        subscription_date: String,
+        website: String,
+    }
+    let df = {
+        polars::io::csv::read::CsvReader::new(Cursor::new(include_bytes!("./test-assets/test.csv")))
+            .finish()
+            .unwrap()
+    };
+
+    println!("{:#?}", df.height());
+
+    let df = DataFrame::new(df.get_columns().to_vec()).unwrap();
+    let ty: Vec<Result<Item, _>> = crate::from_dataframe_deserialize_all(df);
+    println!("{:#?}", ty);
 }
