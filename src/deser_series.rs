@@ -1,7 +1,7 @@
 use polars::frame::DataFrame;
 use serde::Deserializer;
 
-use crate::{series_deser_error, series_deser_map::ImplMapAccess};
+use crate::{deser_map::PlRowImplMapAccess, pl_row_error};
 
 pub struct SeriesDeser {
     pub(crate) df: DataFrame,
@@ -14,7 +14,7 @@ impl SeriesDeser {
 }
 
 impl<'de> Deserializer<'de> for SeriesDeser {
-    type Error = series_deser_error::SeriesDeserError;
+    type Error = pl_row_error::PlRowSerdeError;
 
     fn deserialize_struct<V>(
         self,
@@ -25,7 +25,7 @@ impl<'de> Deserializer<'de> for SeriesDeser {
     where
         V: serde::de::Visitor<'de>,
     {
-        visitor.visit_map(ImplMapAccess::new(&self))
+        visitor.visit_map(PlRowImplMapAccess::new(&self))
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>

@@ -1,4 +1,4 @@
-pub type SeriesDeserError = serde::de::value::Error;
+pub type PlRowSerdeError = serde::de::value::Error;
 //
 // #[derive(Debug)]
 // pub enum SeriesDeserError {

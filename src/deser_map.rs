@@ -5,25 +5,24 @@ use serde::{
 };
 
 use crate::{
-    series_deser::SeriesDeser, series_deser_error::SeriesDeserError,
-    series_deser_root::SeriesDeserItem,
+    deser_root::SeriesDeserItem, deser_series::SeriesDeser, pl_row_error::PlRowSerdeError,
 };
 
-pub(crate) struct ImplMapAccess {
+pub(crate) struct PlRowImplMapAccess {
     pub stack: Vec<Series>,
     pub map_value_idx: usize,
     pub row_idx: usize,
 }
 
-impl<'de> IntoDeserializer<'de> for ImplMapAccess {
-    type Deserializer = ImplMapAccess;
+impl<'de> IntoDeserializer<'de> for PlRowImplMapAccess {
+    type Deserializer = PlRowImplMapAccess;
 
     fn into_deserializer(self) -> Self::Deserializer {
         self
     }
 }
 
-impl ImplMapAccess {
+impl PlRowImplMapAccess {
     pub(crate) fn new(series_deser: &SeriesDeser) -> Self {
         Self {
             stack: series_deser.df.get_columns().to_vec(),
@@ -41,8 +40,8 @@ impl ImplMapAccess {
     }
 }
 
-impl<'de> MapAccess<'de> for ImplMapAccess {
-    type Error = SeriesDeserError;
+impl<'de> MapAccess<'de> for PlRowImplMapAccess {
+    type Error = PlRowSerdeError;
 
     fn next_key<K>(&mut self) -> Result<Option<K>, Self::Error>
     where
@@ -99,7 +98,7 @@ impl<'de> MapAccess<'de> for ImplMapAccess {
     }
 }
 
-impl<'de> Deserializer<'de> for ImplMapAccess {
+impl<'de> Deserializer<'de> for PlRowImplMapAccess {
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
@@ -107,7 +106,7 @@ impl<'de> Deserializer<'de> for ImplMapAccess {
         visitor.visit_map(self)
     }
 
-    type Error = SeriesDeserError;
+    type Error = PlRowSerdeError;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where

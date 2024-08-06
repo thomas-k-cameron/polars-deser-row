@@ -1,5 +1,5 @@
 use polars::{lazy::dsl as pl, prelude::IntoLazy};
-use polars_deser_row::series_deser::SeriesDeser;
+use polars_deser_row::deser_series::SeriesDeser;
 use serde::Deserialize;
 
 fn main() {

@@ -12,8 +12,8 @@ use serde::{
 };
 
 use crate::{
-    seq::ChunkedArrayDeserializer, series_deser_error::SeriesDeserError,
-    series_deser_map::ImplMapAccess,
+    deser_map::PlRowImplMapAccess, deser_seq::ChunkedArrayDeserializer,
+    pl_row_error::PlRowSerdeError,
 };
 
 pub(crate) struct SeriesDeserItemDeserialize(SeriesDeserItem);
@@ -41,7 +41,7 @@ impl<'de> IntoDeserializer<'de> for SeriesDeserItem {
 }
 
 impl SeriesDeserItem {
-    fn maybe_list_or_bytes<'de, V>(self, visitor: V) -> Result<V::Value, SeriesDeserError>
+    fn maybe_list_or_bytes<'de, V>(self, visitor: V) -> Result<V::Value, PlRowSerdeError>
     where
         V: Visitor<'de>,
     {
@@ -53,9 +53,9 @@ impl SeriesDeserItem {
                 }
                 self.series
                     .binary()
-                    .map_err(|e| SeriesDeserError::custom(e))?
+                    .map_err(|e| PlRowSerdeError::custom(e))?
                     .get(self.row_idx)
-                    .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                    .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                     .and_then(|i| visitor.visit_bytes(i))
             }
             DataType::List(_) => self.deserialize_seq(visitor),
@@ -65,7 +65,7 @@ impl SeriesDeserItem {
 }
 
 impl<'de> Deserializer<'de> for SeriesDeserItem {
-    type Error = SeriesDeserError;
+    type Error = PlRowSerdeError;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -94,7 +94,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
 
         if let Ok(list) = self.series.struct_() {};
 
-        Err(SeriesDeserError::custom("TypeMisMatch"))
+        Err(PlRowSerdeError::custom("TypeMisMatch"))
     }
 
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -105,9 +105,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_bool(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -119,9 +119,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_i8(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -133,9 +133,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_i16(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -148,9 +148,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_i32(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -162,9 +162,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_i64(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -176,9 +176,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_u8(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -190,9 +190,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_u16(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -204,9 +204,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_u32(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -218,9 +218,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_u64(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -232,9 +232,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_f32(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -246,9 +246,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_f64(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -263,13 +263,13 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                 let res = i.get(self.row_idx);
                 let ret = match res {
                     Some(c) if c.len() == 1 => c.chars().next(),
-                    Some(_) => return Err(SeriesDeserError::custom("CharLength")),
-                    None => return Err(SeriesDeserError::custom("CharLength")),
+                    Some(_) => return Err(PlRowSerdeError::custom("CharLength")),
+                    None => return Err(PlRowSerdeError::custom("CharLength")),
                 };
-                ret.ok_or_else(|| SeriesDeserError::custom("NULL"))
+                ret.ok_or_else(|| PlRowSerdeError::custom("NULL"))
                     .and_then(|i| visitor.visit_char(i))
             }
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -281,9 +281,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_str(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -295,9 +295,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_string(i.to_string())),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -313,9 +313,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                 }
                 self.series
                     .binary()
-                    .map_err(|e| SeriesDeserError::custom(e))?
+                    .map_err(|e| PlRowSerdeError::custom(e))?
                     .get(self.row_idx)
-                    .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                    .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                     .and_then(|i| visitor.visit_bytes(i))
             }
             DataType::List(_) => self.deserialize_seq(visitor),
@@ -331,9 +331,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         match res {
             Ok(i) => i
                 .get(self.row_idx)
-                .ok_or_else(|| SeriesDeserError::custom("NULL"))
+                .ok_or_else(|| PlRowSerdeError::custom("NULL"))
                 .and_then(|i| visitor.visit_bytes(i)),
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -350,7 +350,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
             match self.series.get(self.row_idx) {
                 Ok(AnyValue::Null) => visitor.visit_none(),
                 Ok(_) => visitor.visit_some(self),
-                Err(e) => Err(SeriesDeserError::custom(e)),
+                Err(e) => Err(PlRowSerdeError::custom(e)),
             }
         } else {
             visitor.visit_some(self)
@@ -537,7 +537,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                         let deser = ChunkedArrayDeserializer::new(
                             (0..c.len()).into_iter().map(|idx| {
                                 let mut impl_map =
-                                    ImplMapAccess::from_series_vec(c.fields().to_vec());
+                                    PlRowImplMapAccess::from_series_vec(c.fields().to_vec());
                                 impl_map.row_idx = idx;
                                 Some(impl_map)
                             }),
@@ -548,7 +548,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                     DataType::Unknown(_) => todo!(),
                 }
             }
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 
@@ -607,7 +607,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                     Some(Some(opt)) => visitor.visit_enum(StrDeserializer::new(opt)),
                 }
             }
-            Err(e) => Err(SeriesDeserError::custom(e)),
+            Err(e) => Err(PlRowSerdeError::custom(e)),
         }
     }
 

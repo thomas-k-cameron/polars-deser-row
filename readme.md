@@ -4,21 +4,7 @@ This crate offers deserialization polars dataframe to native rust type per-row a
 
 Columnar file formats can dramatically reduce the disk usage but it has been  rather difficult to use it with ease.
 
-## Examples
-
-### Deserializing Sequence
-
-```text
-shape: (2, 2)
-┌───────────────────────────┬───────────────────────────┐
-│ veced                     ┆ boxed                     │
-│ ---                       ┆ ---                       │
-│ list[f64]                 ┆ list[f64]                 │
-╞═══════════════════════════╪═══════════════════════════╡
-│ [-inf, 1.0, … 3.0]        ┆ [-inf, 1.0, … 3.0]        │
-│ [2.2251e-308, 1.0, … 3.0] ┆ [2.2251e-308, 1.0, … 3.0] │
-└───────────────────────────┴───────────────────────────┘
-```
+##
 
 This dataframe becomes,
 

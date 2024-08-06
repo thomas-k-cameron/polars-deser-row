@@ -1,26 +1,31 @@
+use deser_series::SeriesDeser;
+use pl_row_error::PlRowSerdeError;
 use polars::frame::DataFrame;
 use serde::Deserialize;
-use series_deser::SeriesDeser;
-use series_deser_error::SeriesDeserError;
 
-mod seq;
-pub mod series_deser;
-pub mod series_deser_error;
-pub mod series_deser_map;
-pub mod series_deser_root;
+//deserialize
+pub mod deser_map;
+pub mod deser_root;
+pub mod deser_seq;
+pub mod deser_series;
+pub mod pl_row_error;
+
+// serialize
+pub mod ser_root;
+pub mod ser_seq;
 //pub mod series_serde_root;
 
 pub fn deserialize_from_dataframe<'de, T>(
     df: DataFrame,
     row_idx: usize,
-) -> Result<T, SeriesDeserError>
+) -> Result<T, PlRowSerdeError>
 where
     T: Deserialize<'de>,
 {
     <T as Deserialize>::deserialize(SeriesDeser { df, row_idx })
 }
 
-pub fn from_dataframe_deserialize_all<'de, T>(df: DataFrame) -> Vec<Result<T, SeriesDeserError>>
+pub fn from_dataframe_deserialize_all<'de, T>(df: DataFrame) -> Vec<Result<T, PlRowSerdeError>>
 where
     T: Deserialize<'de>,
 {
