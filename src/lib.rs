@@ -12,7 +12,7 @@ pub mod pl_row_error;
 
 // serialize
 pub mod ser_root;
-pub mod ser_seq;
+//pub mod ser_seq;
 //pub mod series_serde_root;
 
 pub fn deserialize_from_dataframe<'de, T>(

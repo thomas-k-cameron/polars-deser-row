@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use serde::ser::SerializeSeq;
+use serde::ser::{SerializeSeq, SerializeTuple};
 
 use crate::ser_root::SerdeItemAnyValueBuffer;
 
 pub struct PlRowSerializeSeq<'a> {
-    inner: SerdeItemAnyValueBuffer<'a>,
+    inner: Option<SerdeItemAnyValueBuffer<'a>>,
 }
 impl<'a> SerializeSeq for PlRowSerializeSeq<'a> {
     type Ok = SerdeItemAnyValueBuffer<'a>;
@@ -16,12 +16,23 @@ impl<'a> SerializeSeq for PlRowSerializeSeq<'a> {
     where
         T: ?Sized + serde::Serialize,
     {
-        value.serialize(&mut self.inner)?;
+        match self.inner.take() {
+            Some(item) => {
+                let item = value.serialize(item)?;
+                self.inner = Some(item)
+            }
+            None => unreachable!(),
+        };
+
         Ok(())
     }
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        self.inner
-            .change_not_null_anyvalue_buffer(self.inner.datatype);
-        Ok(())
+        match self.inner {
+            Some(mut item) => {
+                item.change_not_null_anyvalue_buffer(None);
+                Ok(item)
+            }
+            None => unreachable!(),
+        }
     }
 }

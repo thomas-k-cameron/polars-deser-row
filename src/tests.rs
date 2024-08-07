@@ -4,7 +4,7 @@ use std::io::Cursor;
 use polars::datatypes::StructChunked;
 use polars::io::SerReader;
 use polars::lazy::dsl::{self as pl, SpecialEq};
-use polars::prelude::{AnyValue, LiteralValue};
+use polars::prelude::LiteralValue;
 use polars::{
     df,
     frame::DataFrame,
