@@ -19,6 +19,8 @@ pub(crate) mod ser_root;
 //pub mod ser_seq;
 //pub mod series_serde_root;
 
+/// Deserialize a row from given dataframe.
+///
 pub fn deserialize_single_row<'de, T>(df: DataFrame, row_idx: usize) -> Result<T, PlRowSerdeError>
 where
     T: Deserialize<'de>,
@@ -26,6 +28,7 @@ where
     <T as Deserialize>::deserialize(SeriesDeser { df, row_idx })
 }
 
+/// Deserialize whole dataframe.
 pub fn deserialize_all<'de, T>(df: DataFrame) -> Vec<Result<T, PlRowSerdeError>>
 where
     T: Deserialize<'de>,
@@ -40,6 +43,7 @@ where
     stack
 }
 
+/// Serialize rust iterator into a dataframe.
 pub fn serialize_into_dataframe<T, I>(iter: I) -> Result<DataFrame, PlRowSerdeError>
 where
     I: Iterator<Item = T>,
@@ -59,6 +63,7 @@ where
     Ok(plr.into_dataframe())
 }
 
+/// Serialize a rust type into a dataframe.
 pub fn serialize_item_into_dataframe<T>(item: T) -> Result<DataFrame, PlRowSerdeError>
 where
     T: serde::Serialize,
