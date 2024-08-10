@@ -86,5 +86,5 @@ This becomes,
 
 ## TODO
 
-- [ ] support map
-- [ ] support serde's serialization
+- [ ] properly support nested structures for serialization
+- [ ] properly support nested structures for **de**serialization
