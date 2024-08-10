@@ -2,6 +2,8 @@
 
 This crate will serialize/deserialize polars row into Rust datatype and vise-versa.
 
+This should help you working with various columnar data formats.
+
 e.g.
 
 ```rust
