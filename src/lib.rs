@@ -1,3 +1,4 @@
+#![doc = include_str!("./lib.doc.md")]
 use deser_series::SeriesDeser;
 use pl_row_error::PlRowSerdeError;
 use polars::frame::DataFrame;
