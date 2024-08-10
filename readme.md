@@ -4,7 +4,9 @@ This crate offers deserialization polars dataframe to native rust type per-row a
 
 Columnar file formats can dramatically reduce the disk usage but it has been  rather difficult to use it with ease.
 
-##
+This project isn't finished.
+
+## Examples
 
 This dataframe becomes,
 

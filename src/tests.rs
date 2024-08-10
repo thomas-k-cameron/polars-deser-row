@@ -12,6 +12,8 @@ use polars::{
     series::Series,
 };
 
+use crate::deser_series::SeriesDeser;
+
 #[test]
 fn deser_primitive_integers() {
     #[derive(serde::Deserialize, Debug, PartialEq, Eq)]
@@ -40,7 +42,7 @@ fn deser_primitive_integers() {
     )
     .unwrap();
 
-    let ty: PrimitiveTyInt = crate::deserialize_from_dataframe(df.clone(), 0).unwrap();
+    let ty: PrimitiveTyInt = crate::deserialize_single_row(df.clone(), 0).unwrap();
     assert_eq!(
         ty,
         PrimitiveTyInt {
@@ -56,7 +58,7 @@ fn deser_primitive_integers() {
         }
     );
     dbg!(ty);
-    let ty: PrimitiveTyInt = crate::deserialize_from_dataframe(df.clone(), 1).unwrap();
+    let ty: PrimitiveTyInt = crate::deserialize_single_row(df.clone(), 1).unwrap();
     assert_eq!(
         ty,
         PrimitiveTyInt {
@@ -72,7 +74,7 @@ fn deser_primitive_integers() {
         }
     );
 
-    let ty: PrimitiveTyInt = crate::deserialize_from_dataframe(df.clone(), 2).unwrap();
+    let ty: PrimitiveTyInt = crate::deserialize_single_row(df.clone(), 2).unwrap();
     assert_eq!(
         ty,
         PrimitiveTyInt {
@@ -88,7 +90,7 @@ fn deser_primitive_integers() {
         }
     );
 
-    let ty_stack = crate::from_dataframe_deserialize_all::<PrimitiveTyInt>(df.clone())
+    let ty_stack = crate::deserialize_all::<PrimitiveTyInt>(df.clone())
         .into_iter()
         .map(|i| i.unwrap())
         .collect::<Vec<_>>();
@@ -146,7 +148,7 @@ fn deser_primitive_float() {
     )
     .unwrap();
 
-    let ty: PrimitiveFloat = crate::deserialize_from_dataframe(df.clone(), 0).unwrap();
+    let ty: PrimitiveFloat = crate::deserialize_single_row(df.clone(), 0).unwrap();
     assert_eq!(
         ty,
         PrimitiveFloat {
@@ -155,7 +157,7 @@ fn deser_primitive_float() {
         }
     );
 
-    let ty: PrimitiveFloat = crate::deserialize_from_dataframe(df.clone(), 1).unwrap();
+    let ty: PrimitiveFloat = crate::deserialize_single_row(df.clone(), 1).unwrap();
     assert_eq!(
         ty,
         PrimitiveFloat {
@@ -164,7 +166,7 @@ fn deser_primitive_float() {
         }
     );
 
-    let ty: PrimitiveFloat = crate::deserialize_from_dataframe(df.clone(), 2).unwrap();
+    let ty: PrimitiveFloat = crate::deserialize_single_row(df.clone(), 2).unwrap();
     assert_eq!(
         ty,
         PrimitiveFloat {
@@ -174,7 +176,7 @@ fn deser_primitive_float() {
     );
     println!("{df:?}");
     dbg!(ty);
-    let ty_stack = crate::from_dataframe_deserialize_all::<PrimitiveFloat>(df.clone())
+    let ty_stack = crate::deserialize_all::<PrimitiveFloat>(df.clone())
         .into_iter()
         .map(|i| i.unwrap())
         .collect::<Vec<_>>();
@@ -228,7 +230,7 @@ fn deser_seq() {
                 .collect()
                 .unwrap();
 
-            let asdf: $struct_name = crate::deserialize_from_dataframe(df.clone(), 0).unwrap();
+            let asdf: $struct_name = crate::deserialize_single_row(df.clone(), 0).unwrap();
 
             assert_eq!(
                 asdf,
@@ -238,7 +240,7 @@ fn deser_seq() {
                 }
             );
 
-            let asdf: $struct_name = crate::deserialize_from_dataframe(df.clone(), 1).unwrap();
+            let asdf: $struct_name = crate::deserialize_single_row(df.clone(), 1).unwrap();
             assert_eq!(
                 asdf,
                 $struct_name {
@@ -298,7 +300,7 @@ fn deser_nested_seq() {
     println!("{:#?}", s.fields());
 
     let df = DataFrame::new(s.fields().to_vec()).unwrap();
-    let ty: Vec<Result<Item, _>> = crate::from_dataframe_deserialize_all(df);
+    let ty: Vec<Result<Item, _>> = crate::deserialize_all(df);
     println!("{:#?}", ty);
 }
 
@@ -328,6 +330,79 @@ fn deser_nested_seq_csv() {
     println!("{:#?}", df.height());
 
     let df = DataFrame::new(df.get_columns().to_vec()).unwrap();
-    let ty: Vec<Result<Item, _>> = crate::from_dataframe_deserialize_all(df);
+    let ty: Vec<Result<Item, _>> = crate::deserialize_all(df);
     println!("{:#?}", ty);
+}
+
+#[test]
+fn testasdf() {
+    use polars::{lazy::dsl as pl, prelude::IntoLazy};
+    use serde::Deserialize;
+
+    fn main() {
+        let df = polars::df! {
+            "int8" => [-8i8],
+            "int8_to_16" => [-8_16i16],
+            "int16" => [-16i16],
+            "int32" => [-32i32],
+            "int64" => [-64i64],
+            "uint8" => [8u8],
+            "uint16" => [16u16],
+            "uint32" => [32u32],
+            "uint64" => [64u64],
+            "float32" => [f32::EPSILON],
+            "float64" => [f64::EPSILON],
+            "utf8" => ["hello".to_string()],
+            "bytes_box" => ["hello".as_bytes()],
+            "bytes_vec" => ["hello".as_bytes()],
+            "char" => ["c"],
+            "cat" => [format!("{:?}", AsdfEnum::Lol)],
+            "cat_str" => [format!("{:?}", AsdfEnum::Lol)],
+            "cat_bytes" => [format!("{:?}", AsdfEnum::Lol)],
+            "cat_chars" => [format!("{:?}", AsdfEnum::Lol)],
+        }
+        .unwrap()
+        .lazy()
+        .with_column(
+            pl::col("cat").cast(polars::datatypes::DataType::Categorical(
+                None,
+                polars::datatypes::CategoricalOrdering::Lexical,
+            )),
+        )
+        .collect()
+        .unwrap();
+
+        println!("{df}");
+        let asdf = Asdf::deserialize(SeriesDeser::new(df, 0)).unwrap();
+        println!("{asdf:#?}");
+    }
+
+    #[derive(serde::Deserialize, Debug)]
+    struct Asdf {
+        int8: i8,
+        int8_to_16: i16,
+        int16: i16,
+        int32: i32,
+        int64: i64,
+        uint8: u8,
+        uint16: u16,
+        uint32: u32,
+        uint64: u64,
+        float32: f32,
+        float64: f64,
+        utf8: String,
+        bytes_box: Box<[u8]>,
+        bytes_vec: Vec<u8>,
+        char_: char,
+        cat: AsdfEnum,
+        cat_str: String,
+        cat_bytes: Box<[u8]>,
+    }
+
+    #[derive(serde::Deserialize, Debug)]
+    enum AsdfEnum {
+        Lol,
+        Stuff,
+        Things,
+    }
 }

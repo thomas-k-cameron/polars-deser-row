@@ -247,7 +247,7 @@ fn enum_variant_serialize_into_series() {
 }
 
 #[test]
-fn test_serialize_into_series_asdf() {
+fn test_serialize_df() {
     #[derive(serde::Serialize, Default)]
     struct TestStruct {
         boolean: bool,
@@ -271,7 +271,7 @@ fn test_serialize_into_series_asdf() {
         .into_dataframe();
 
     assert_eq!(df.height(), 1);
-    assert_eq!(df.get_columns().len(), 12);
+    assert_eq!(df.get_columns().len(), 13);
 
     // bool
     assert_eq!(df["boolean"].get(0).unwrap(), AnyValue::Boolean(false));
@@ -295,6 +295,77 @@ fn test_serialize_into_series_asdf() {
     assert_eq!(df["utf8_static"].get(0).unwrap(), AnyValue::String(""));
 }
 
+#[test]
+fn test_serialize_df_list() {
+    #[derive(serde::Serialize, Debug)]
+    struct TestStruct {
+        vector_u8: Vec<u8>,
+    }
+    let t = TestStruct {
+        vector_u8: vec![1, 2, 3],
+    };
+    let df = t
+        .serialize(PlRowSerStruct::default())
+        .unwrap()
+        .into_dataframe();
+    println!("{df:?}");
+    let df2 = DataFrame::new(vec![Series::new("", [Series::new("", [1u8, 2, 3])])]).unwrap();
+    println!("{df2:?}");
+    // if there is no value, it becomes null
+    assert_eq!(
+        df["vector_u8"].get(0).unwrap(),
+        AnyValue::List(Series::new("", [1u8, 2, 3]))
+    );
+}
+
+#[test]
+fn test_serialize_df_optional_none() {
+    #[derive(serde::Serialize, Default)]
+    struct TestStruct {
+        boolean: Option<bool>,
+        int8: Option<i8>,
+        int16: Option<i16>,
+        int32: Option<i32>,
+        int64: Option<i64>,
+        uint8: Option<u8>,
+        uint16: Option<u16>,
+        uint32: Option<u32>,
+        uint64: Option<u64>,
+        utf8_heap: Option<String>,
+        utf8_static: Option<&'static str>,
+        char: Option<char>,
+        vector_u8: Vec<Option<u8>>,
+    }
+
+    let t = TestStruct::default();
+    let df = t
+        .serialize(PlRowSerStruct::default())
+        .unwrap()
+        .into_dataframe();
+
+    assert_eq!(df.height(), 1);
+    assert_eq!(df.get_columns().len(), 13);
+
+    // bool
+    assert_eq!(df["boolean"].get(0).unwrap(), AnyValue::Null);
+    assert_eq!(df["int8"].get(0).unwrap(), AnyValue::Null);
+    assert_eq!(df["int16"].get(0).unwrap(), AnyValue::Null);
+    assert_eq!(df["int32"].get(0).unwrap(), AnyValue::Null);
+    assert_eq!(df["int64"].get(0).unwrap(), AnyValue::Null);
+    assert_eq!(df["uint8"].get(0).unwrap(), AnyValue::Null);
+    assert_eq!(df["uint16"].get(0).unwrap(), AnyValue::Null);
+    assert_eq!(df["uint32"].get(0).unwrap(), AnyValue::Null);
+    assert_eq!(df["uint64"].get(0).unwrap(), AnyValue::Null);
+    // letters and stuff
+    assert_eq!(df["char"].get(0).unwrap(), AnyValue::Null);
+
+    assert_eq!(df["utf8_heap"].get(0).unwrap(), AnyValue::Null);
+    assert_eq!(df["utf8_static"].get(0).unwrap(), AnyValue::Null);
+
+    // if there is no value, it becomes null
+    assert_eq!(df["vector_u8"].get(0).unwrap(), AnyValue::Null);
+}
+
 #[derive(Default, Debug)]
 struct PlRowSer {
     pl_ser: Series,
@@ -305,6 +376,7 @@ struct PlSerPlaceHolder;
 
 #[derive(Default, Debug)]
 struct PlRowSerSeq {
+    parent_ser: PlRowSer,
     pl_ser: Option<PlRowSer>,
 }
 impl SerializeSeq for PlRowSerSeq {
@@ -329,7 +401,24 @@ impl SerializeSeq for PlRowSerSeq {
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        todo!()
+        let other = if self.pl_ser.is_none() {
+            Series::new_null(&self.parent_ser.pl_ser.name(), 0)
+        } else {
+            self.pl_ser.unwrap().pl_ser
+        };
+
+        let mut pl_ser = self.parent_ser.pl_ser;
+        println!("{pl_ser}");
+        println!("{other}");
+        if pl_ser.dtype() == &DataType::Null && pl_ser.len() == 0 && pl_ser.dtype() != other.dtype()
+        {
+            pl_ser = pl_ser
+                .cast(&DataType::List(other.dtype().clone().boxed()))
+                .unwrap();
+        }
+
+        pl_ser.extend(&Series::new("", [other])).unwrap();
+        Ok(pl_ser)
     }
 }
 
@@ -508,7 +597,9 @@ impl<'a> Serializer for PlRowSer {
         for i in v {
             seq.serialize_element(i)?;
         }
-        seq.end()
+        let ser = seq.end().unwrap();
+
+        Ok(ser)
     }
 
     fn serialize_none(mut self) -> Result<Self::Ok, Self::Error> {
@@ -590,8 +681,10 @@ impl<'a> Serializer for PlRowSer {
     }
 
     fn serialize_seq(self, _: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
-        let seq = PlRowSerSeq::default();
-
+        let seq = PlRowSerSeq {
+            pl_ser: None,
+            parent_ser: self,
+        };
         Ok(seq)
     }
 
@@ -647,11 +740,23 @@ pub struct PlRowSerStruct {
 
 impl PlRowSerStruct {
     pub fn into_dataframe(self) -> DataFrame {
-        let columns: Vec<_> = self
+        let mut max_length = 0;
+        let mut columns: Vec<_> = self
             .pl_ser_map
             .into_iter()
-            .map(|(_, val)| val.pl_ser)
+            .map(|(name, val)| {
+                if val.pl_ser.len() > max_length {
+                    max_length = val.pl_ser.len()
+                }
+                val.pl_ser
+            })
             .collect();
+        columns.iter_mut().for_each(|ser| {
+            println!("{:#?}", ser.name());
+            if ser.len() != max_length && ser.dtype() == &DataType::Null {
+                *ser = Series::new_null(ser.name(), max_length);
+            }
+        });
         DataFrame::new(columns).unwrap()
     }
 }
