@@ -480,22 +480,19 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                             .into_iter()
                             .map(|opt_ser| {
                                 (0..series.len()).into_iter().map(move |row_idx| {
-                                    if opt_ser.is_none() {
-                                        return None;
-                                    }
                                     if let Some(series) = opt_ser.as_ref() {
-                                        return Some(SeriesDeserItem {
+                                        Some(SeriesDeserItem {
                                             series: series.clone(),
                                             row_idx,
-                                        });
+                                        })
                                     } else {
-                                        unreachable!()
+                                        None
                                     }
                                 })
                             })
                             .flatten();
-                        let c = ChunkedArrayDeserializer::new(iter, *size);
-                        visitor.visit_seq(c)
+
+                        visitor.visit_seq(ChunkedArrayDeserializer::new(iter, *size))
                     }
                     DataType::List(_) => {
                         let c = ChunkedArrayDeserializer::new(
@@ -507,7 +504,6 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                         );
                         visitor.visit_seq(c)
                     }
-                    DataType::Object(_, _) => todo!(),
                     DataType::Null => visitor.visit_seq(ChunkedArrayDeserializer::new(
                         (0..self.series.len())
                             .into_iter()
@@ -535,6 +531,8 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                         let deser = ChunkedArrayDeserializer::new(iter, self.series.len());
                         visitor.visit_seq(deser)
                     }
+                    // todo. Fix stuff
+                    DataType::Object(_, _) => todo!(),
                     DataType::Unknown(_) => todo!(),
                 }
             }
