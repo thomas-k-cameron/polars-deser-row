@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::HashSet, rc::Rc};
 
 use polars::{
     datatypes::{AnyValue, DataType, LogicalType},
@@ -64,29 +64,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
         V: serde::de::Visitor<'de>,
     {
         // try date
-        if let Ok(list) = self.series.date() {
-            return visitor.visit_i32(list.0.get(self.row_idx).unwrap());
-        };
-
-        if let Ok(list) = self.series.time() {
-            return visitor.visit_i64(list.0.get(self.row_idx).unwrap());
-        };
-
-        if let Ok(list) = self.series.datetime() {
-            return visitor.visit_i64(list.0.get(self.row_idx).unwrap());
-        };
-
-        if let Ok(list) = self.series.duration() {
-            return visitor.visit_i64(list.0.get(self.row_idx).unwrap());
-        };
-
-        if let Ok(list) = self.series.decimal() {
-            return visitor.visit_i128(list.0.get(self.row_idx).unwrap());
-        };
-
-        if let Ok(list) = self.series.struct_() {};
-
-        Err(PlRowSerdeError::custom("TypeMisMatch"))
+        unimplemented!()
     }
 
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -531,7 +509,7 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
                         let deser = ChunkedArrayDeserializer::new(iter, self.series.len());
                         visitor.visit_seq(deser)
                     }
-                    // todo. Fix stuff
+                    // todo. Fix this
                     DataType::Object(_, _) => todo!(),
                     DataType::Unknown(_) => todo!(),
                 }
@@ -544,26 +522,38 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        match len {
+            0 => visitor.visit_unit(),
+            1 => todo!(),
+            _ => todo!(),
+        }
     }
 
     fn deserialize_tuple_struct<V>(
         self,
-        name: &'static str,
+        _name: &'static str,
         len: usize,
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        self.deserialize_tuple(len, visitor)
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        match self.series.struct_() {
+            Ok(s) => {
+                let map = PlRowImplMapAccess::from_series_vec(Rc::new(
+                    s.fields().to_vec().into_boxed_slice(),
+                ));
+                visitor.visit_map(map)
+            }
+            Err(e) => Err(PlRowSerdeError::custom(e.to_string())),
+        }
     }
 
     fn deserialize_struct<V>(
@@ -575,7 +565,16 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        match self.series.struct_() {
+            Ok(s) => {
+                let Some(i) = s.iter().skip(self.row_idx).next() else {};
+                let map = PlRowImplMapAccess::from_series_vec(Rc::new(
+                    s.fields().to_vec().into_boxed_slice(),
+                ));
+                visitor.visit_map(map)
+            }
+            Err(e) => Err(PlRowSerdeError::custom(e.to_string())),
+        }
     }
 
     fn deserialize_enum<V>(
