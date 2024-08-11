@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use polars::series::Series;
 use serde::{
     de::{value::StrDeserializer, IntoDeserializer, MapAccess},
@@ -9,7 +11,7 @@ use crate::{
 };
 
 pub(crate) struct PlRowImplMapAccess {
-    pub stack: Vec<Series>,
+    pub stack: Rc<Box<[Series]>>,
     pub map_value_idx: usize,
     pub row_idx: usize,
 }
@@ -25,13 +27,13 @@ impl<'de> IntoDeserializer<'de> for PlRowImplMapAccess {
 impl PlRowImplMapAccess {
     pub(crate) fn new(series_deser: &SeriesDeser) -> Self {
         Self {
-            stack: series_deser.df.get_columns().to_vec(),
+            stack: Rc::new(series_deser.df.get_columns().to_vec().into_boxed_slice()),
             row_idx: series_deser.row_idx,
             map_value_idx: 0,
         }
     }
 
-    pub fn from_series_vec(stack: Vec<Series>) -> Self {
+    pub fn from_series_vec(stack: Rc<Box<[Series]>>) -> Self {
         Self {
             stack,
             row_idx: 0,

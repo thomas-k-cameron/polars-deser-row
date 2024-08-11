@@ -9,7 +9,7 @@ where
     I: Iterator<Item = Option<IntoD>>,
 {
     chunked: I,
-    len: usize,
+    len: Option<usize>,
     _p: PhantomData<(&'de (), E)>,
 }
 
@@ -19,10 +19,10 @@ where
     IntoD: IntoDeserializer<'de, E>,
     I: Iterator<Item = Option<IntoD>>,
 {
-    pub fn new(chunked: I, len: usize) -> Self {
+    pub fn new(chunked: I, len: impl Into<Option<usize>>) -> Self {
         Self {
             chunked,
-            len,
+            len: len.into(),
             _p: PhantomData,
         }
     }
@@ -41,13 +41,13 @@ where
         V: serde::de::DeserializeSeed<'de>,
     {
         match self.chunked.next() {
-            Some(None) => seed.deserialize(UnitDeserializer::new()).map(|i| Some(i)),
+            Some(None) => seed.deserialize(UnitDeserializer::new()).map(|_| None),
             Some(Some(value)) => seed.deserialize(value.into_deserializer()).map(|i| Some(i)),
             None => Ok(None),
         }
     }
 
     fn size_hint(&self) -> Option<usize> {
-        Some(self.len)
+        self.len
     }
 }

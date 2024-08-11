@@ -48,8 +48,13 @@ fn test_serialize_into_series_with_options_primitive() {
         option_uint64: Option<u64>,
         option_utf8_heap: Option<String>,
         option_utf8_static: Option<&'static str>,
+        option_unit: Option<()>,
     }
     let t = TestStruct::default();
+    assert_eq!(
+        Ok(Series::new_null("", 1)),
+        t.option_unit.serialize(PlRowSer::default())
+    );
     assert_eq!(
         Ok(Series::new_null("", 1)),
         t.option_boolean.serialize(PlRowSer::default())
@@ -107,7 +112,12 @@ fn test_serialize_into_series_with_options_primitive() {
         option_uint64: Some(Default::default()),
         option_utf8_heap: Some(Default::default()),
         option_utf8_static: Some(Default::default()),
+        option_unit: Some(()),
     };
+    assert_eq!(
+        Ok(Series::new("", [true])),
+        t.option_unit.serialize(PlRowSer::default())
+    );
     assert_eq!(
         Ok(Series::new("", [false])),
         t.option_boolean.serialize(PlRowSer::default())
@@ -170,9 +180,14 @@ fn test_serialize_into_series() {
         utf8_heap: String,
         utf8_static: &'static str,
         char: char,
+        unit: (),
     }
 
     let t = TestStruct::default();
+    assert_eq!(
+        Ok(Series::new("", [true])),
+        t.unit.serialize(PlRowSer::default())
+    );
     assert_eq!(
         Ok(Series::new("", [false])),
         t.boolean.serialize(PlRowSer::default())
