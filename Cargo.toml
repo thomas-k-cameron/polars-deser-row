@@ -4,11 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-polars = { version = "0.41.3", features = [
-    "object",
-    "dtype-full",
-    "lazy",
-    "serde",
-] }
+polars = { version = "0.41.3", features = ["object", "dtype-full", "lazy"] }
 serde = { version = "1.0.203", features = ["derive"] }
 source_code_location = { git = "https://github.com/thomas-k-cameron/source_code_location.git" }
