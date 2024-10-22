@@ -286,7 +286,7 @@ fn test_serialize_df() {
         .into_dataframe();
 
     assert_eq!(df.height(), 1);
-    assert_eq!(df.get_columns().len(), 13);
+    assert_eq!(df.get_columns().len(), 12);
 
     // bool
     assert_eq!(df["boolean"].get(0).unwrap(), AnyValue::Boolean(false));
