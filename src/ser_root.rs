@@ -425,7 +425,8 @@ impl SerializeSeq for PlRowSerSeq {
         let mut pl_ser = self.parent_ser.pl_ser;
         println!("{pl_ser}");
         println!("{other}");
-        if pl_ser.len() == 0 && pl_ser.dtype() != other.dtype() {
+        if pl_ser.dtype() == &DataType::Null && pl_ser.len() == 0 && pl_ser.dtype() != other.dtype()
+        {
             pl_ser = pl_ser
                 .cast(&DataType::List(other.dtype().clone().boxed()))
                 .unwrap();
