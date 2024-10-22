@@ -567,7 +567,9 @@ impl<'de> Deserializer<'de> for SeriesDeserItem {
     {
         match self.series.struct_() {
             Ok(s) => {
-                let Some(i) = s.iter().skip(self.row_idx).next() else {};
+                if let Some(i) = s.iter().skip(self.row_idx).next() {
+                } else {
+                };
                 let map = PlRowImplMapAccess::from_series_vec(Rc::new(
                     s.fields().to_vec().into_boxed_slice(),
                 ));
