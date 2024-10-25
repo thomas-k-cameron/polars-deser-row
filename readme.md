@@ -8,25 +8,6 @@ This project is WIP.
 
 ## Examples
 
-This dataframe becomes,
-
-```rust
-Structf64 {
-    veced: [
-        -inf,
-        1.0,
-        2.0,
-        3.0,
-    ],
-    boxed: [
-        -inf,
-        1.0,
-        2.0,
-        3.0,
-    ],
-}
-```
-
 ### Deserializing Integers and `bool`
 
 ```text
