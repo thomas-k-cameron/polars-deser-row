@@ -1,10 +1,12 @@
 # Serde for columnar file formats with Polars
 
 This crate offers deserialization polars dataframe to native rust type per-row and vise-versa.
-
-Columnar file formats can dramatically reduce the disk usage but it has been  rather difficult to use it with ease.
-
 This project is WIP.
+
+## Use Case
+
+1. You want to use columnar file to store you data, instead of using things like ndjson.
+2. You want to apply a complicated computation on your data, but you can't figure out how to do it in polars way.
 
 ## Examples
 
