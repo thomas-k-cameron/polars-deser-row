@@ -28,7 +28,10 @@ fn main() {
     )
     .unwrap();
 
-    let ty: PrimitiveTyInt = crate::deserialize_all(df.clone()).unwrap();
+    let ty: Vec<PrimitiveTyInt> = crate::deserialize_all(df.clone())
+        .into_iter()
+        .map(|i| i.unwrap())
+        .collect();
     println!("{ty:?}");
     println!("{df}");
 }
