@@ -6,7 +6,7 @@ This project is WIP.
 ## Use Case
 
 1. You want to use columnar file to store you data, instead of using things like ndjson.
-2. You want to apply a complicated computation on your data, but you can't figure out how to do it in polars way.
+2. You want to apply a complicated computation on your data, but you can't figure out how to do it in polars way. So you want to stick with Rust control flow.
 
 ## Examples
 
