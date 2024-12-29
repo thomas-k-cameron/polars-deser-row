@@ -10,8 +10,11 @@ This project is WIP.
 
 ## Data type conversion
 
+### Primitive Types
+
 |polars type|rust type|
 |--|--|
+|Null|Option::None|
 |boolean|bool|
 |int64|i64|
 |int32|i32|
@@ -23,6 +26,13 @@ This project is WIP.
 |uint8|u8|
 |float64|f64|
 |float32|f32|
+
+### Composite Types
+
+Arrow comes with data types that you can't easily map to a corresponding rust type.
+
+|polars type|rust type|
+|--|--|
 |utf8|TODO!|
 |list|TODO!|
 |map|TODO!|
