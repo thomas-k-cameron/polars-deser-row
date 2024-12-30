@@ -10,32 +10,38 @@ This project is WIP.
 
 ## Data type conversion
 
-### Primitive Types
+### Primitive Rust Types
 
-|polars type|rust type|
-|--|--|
-|Null|Option::None|
-|boolean|bool|
-|int64|i64|
-|int32|i32|
-|int16|i16|
-|int8|i8|
-|uint64|u64|
-|uint32|u32|
-|uint16|u16|
-|uint8|u8|
-|float64|f64|
-|float32|f32|
+| polars type      | rust type             |
+| ---------------- | --------------------- |
+| boolean          | bool                  |
+| int64            | i64                   |
+| int32            | i32                   |
+| int16            | i16                   |
+| int8             | i8                    |
+| uint64           | u64                   |
+| uint32           | u32                   |
+| uint16           | u16                   |
+| uint8            | u8                    |
+| float64          | f64                   |
+| float32          | f32                   |
 
-### Composite Types
+### Optional/Nullable Values
 
-Arrow comes with data types that you can't easily map to a corresponding rust type.
-
-|polars type|rust type|
-|--|--|
-|utf8|TODO!|
-|list|TODO!|
-|map|TODO!|
+| polars type | rust type             |
+| ----------- | --------------------- |
+| null        | true                  |
+| boolean     | Option::\<bool>::Some |
+| int64       | Option::\<i64>::Some  |
+| int32       | Option::\<i32>::Some  |
+| int16       | Option::\<i16>::Some  |
+| int8        | Option::\<i8>::Some   |
+| uint64      | Option::\<u64>::Some  |
+| uint32      | Option::\<u32>::Some  |
+| uint16      | Option::\<u16>::Some  |
+| uint8       | Option::\<u8>::Some   |
+| float64     | Option::\<f64>::Some  |
+| float32     | Option::\<f32>::Some  |
 
 ## Examples
 
